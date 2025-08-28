@@ -20,22 +20,29 @@ st.title("🛡️ Fraud Detection with Machine Learning")
 st.sidebar.header("⚙️ Controls")
 
 # ---------------------------
-# 📂 File Upload
+# 📂 File Upload or Sample Data
 # ---------------------------
 uploaded_file = st.sidebar.file_uploader("Upload your dataset (CSV)", type=["csv"])
+use_sample = st.sidebar.checkbox("👉 Use sample dataset (demo)")
 
-if uploaded_file is not None:
+if uploaded_file:
     df = pd.read_csv(uploaded_file)
-    st.success("✅ Dataset uploaded successfully!")
+    st.success("✅ Custom dataset uploaded!")
+elif use_sample:
+    df = pd.read_csv("sample_fraud_data.csv")   # make sure this file is in repo
+    st.success("✅ Loaded sample dataset!")
+else:
+    df = None
 
+# ---------------------------
+# 🚀 If dataset is available
+# ---------------------------
+if df is not None:
     # ---------------------------
     # Let user pick target column
     # ---------------------------
     target_col = st.sidebar.selectbox("Select the target column", df.columns)
 
-    # ---------------------------
-    # Auto-train model once dataset is uploaded
-    # ---------------------------
     if target_col:
         # Preprocess
         X = pd.get_dummies(df.drop(target_col, axis=1), drop_first=True)
@@ -91,9 +98,21 @@ if uploaded_file is not None:
         # ---------------------------
         with tab2:
             acc = accuracy_score(y_test, y_pred)
-            prec = precision_score(y_test, y_pred, average="binary" if len(y.unique()) == 2 else "macro", zero_division=0)
-            rec = recall_score(y_test, y_pred, average="binary" if len(y.unique()) == 2 else "macro", zero_division=0)
-            f1 = f1_score(y_test, y_pred, average="binary" if len(y.unique()) == 2 else "macro", zero_division=0)
+            prec = precision_score(
+                y_test, y_pred,
+                average="binary" if len(y.unique()) == 2 else "macro",
+                zero_division=0
+            )
+            rec = recall_score(
+                y_test, y_pred,
+                average="binary" if len(y.unique()) == 2 else "macro",
+                zero_division=0
+            )
+            f1 = f1_score(
+                y_test, y_pred,
+                average="binary" if len(y.unique()) == 2 else "macro",
+                zero_division=0
+            )
 
             st.subheader("📈 Model Performance Metrics")
             col1, col2, col3, col4 = st.columns(4)
@@ -128,4 +147,4 @@ if uploaded_file is not None:
 
             st.write("Prediction:", "⚠️ Fraud" if prediction == 1 else "✅ Not Fraud")
 else:
-    st.info("👆 Upload a dataset to get started.")
+    st.info("👆 Upload a dataset or use the sample dataset to get started.")
