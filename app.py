@@ -22,81 +22,80 @@ st.sidebar.header("⚙️ Controls")
 # ---------------------------
 # 📂 File Upload
 # ---------------------------
-uploaded_file = st.sidebar.file_uploader("Upload fraud_data.csv", type=["csv"])
+uploaded_file = st.sidebar.file_uploader("Upload your dataset (CSV)", type=["csv"])
 
 if uploaded_file is not None:
     df = pd.read_csv(uploaded_file)
     st.success("✅ Dataset uploaded successfully!")
 
     # ---------------------------
-    # 📊 Tabs for Navigation
+    # Let user pick target column
     # ---------------------------
-    tab1, tab2, tab3, tab4 = st.tabs(["📂 Data", "📊 EDA", "🧠 Model Training", "🔮 Predictions"])
+    target_col = st.sidebar.selectbox("Select the target column", df.columns)
 
     # ---------------------------
-    # 📂 Data Tab
+    # Auto-train model once dataset is uploaded
     # ---------------------------
-    with tab1:
-        st.subheader("Dataset Preview")
-        st.dataframe(df.head())
-        st.write("Shape:", df.shape)
+    if target_col:
+        # Preprocess
+        X = pd.get_dummies(df.drop(target_col, axis=1), drop_first=True)
+        y = df[target_col]
 
-        st.subheader("Summary Statistics")
-        st.write(df.describe())
+        # Train-test split
+        test_size = st.sidebar.slider("Test Size", 0.1, 0.5, 0.2)
+        X_train, X_test, y_train, y_test = train_test_split(
+            X, y, test_size=test_size, random_state=42
+        )
 
-    # ---------------------------
-    # 📊 EDA Tab
-    # ---------------------------
-    with tab2:
-        if "isFraud" in df.columns:
-            st.subheader("Fraud vs Non-Fraud Distribution")
-            fig, ax = plt.subplots()
-            sns.countplot(data=df, x="isFraud", ax=ax)
+        # Model selection
+        model_choice = st.sidebar.selectbox("Select Model", ["Random Forest", "Logistic Regression"])
+
+        if model_choice == "Random Forest":
+            n_estimators = st.sidebar.slider("n_estimators", 10, 200, 50)
+            model = RandomForestClassifier(n_estimators=n_estimators, random_state=42)
+        else:
+            model = LogisticRegression(max_iter=1000)
+
+        # Train
+        model.fit(X_train, y_train)
+        y_pred = model.predict(X_test)
+
+        # Save model
+        os.makedirs("models", exist_ok=True)
+        joblib.dump(model, "models/fraud_model.joblib")
+
+        # ---------------------------
+        # 📊 Tabs for Navigation
+        # ---------------------------
+        tab1, tab2, tab3 = st.tabs(["📂 Data & EDA", "📈 Model Performance", "🔮 Predictions"])
+
+        # ---------------------------
+        # 📂 Data & EDA Tab
+        # ---------------------------
+        with tab1:
+            st.subheader("Dataset Preview")
+            st.dataframe(df.head())
+            st.write("Shape:", df.shape)
+
+            st.subheader("Summary Statistics")
+            st.write(df.describe())
+
+            st.subheader("Correlation Heatmap")
+            corr = df.corr(numeric_only=True)
+            fig, ax = plt.subplots(figsize=(10, 6))
+            sns.heatmap(corr, annot=False, cmap="coolwarm", ax=ax)
             st.pyplot(fig)
 
-        st.subheader("Correlation Heatmap")
-        corr = df.corr(numeric_only=True)
-        fig, ax = plt.subplots(figsize=(10, 6))
-        sns.heatmap(corr, annot=False, cmap="coolwarm", ax=ax)
-        st.pyplot(fig)
-
-    # ---------------------------
-    # 🧠 Model Training Tab
-    # ---------------------------
-    with tab3:
-        if "isFraud" not in df.columns:
-            st.error("❌ Dataset must contain an 'isFraud' column as target variable.")
-        else:
-            # Preprocess
-            X = pd.get_dummies(df.drop("isFraud", axis=1), drop_first=True)
-            y = df["isFraud"]
-
-            # Train-test split
-            test_size = st.sidebar.slider("Test Size", 0.1, 0.5, 0.2)
-            X_train, X_test, y_train, y_test = train_test_split(
-                X, y, test_size=test_size, random_state=42
-            )
-
-            # Model selection
-            model_choice = st.sidebar.selectbox("Select Model", ["Random Forest", "Logistic Regression"])
-
-            if model_choice == "Random Forest":
-                n_estimators = st.sidebar.slider("n_estimators", 10, 200, 50)
-                model = RandomForestClassifier(n_estimators=n_estimators, random_state=42)
-            else:
-                model = LogisticRegression(max_iter=1000)
-
-            # Train
-            model.fit(X_train, y_train)
-            y_pred = model.predict(X_test)
-
-            # Metrics
+        # ---------------------------
+        # 📈 Model Performance Tab
+        # ---------------------------
+        with tab2:
             acc = accuracy_score(y_test, y_pred)
-            prec = precision_score(y_test, y_pred, zero_division=0)
-            rec = recall_score(y_test, y_pred, zero_division=0)
-            f1 = f1_score(y_test, y_pred, zero_division=0)
+            prec = precision_score(y_test, y_pred, average="binary" if len(y.unique()) == 2 else "macro", zero_division=0)
+            rec = recall_score(y_test, y_pred, average="binary" if len(y.unique()) == 2 else "macro", zero_division=0)
+            f1 = f1_score(y_test, y_pred, average="binary" if len(y.unique()) == 2 else "macro", zero_division=0)
 
-            st.subheader("📈 Model Performance")
+            st.subheader("📈 Model Performance Metrics")
             col1, col2, col3, col4 = st.columns(4)
             col1.metric("Accuracy", f"{acc:.2f}")
             col2.metric("Precision", f"{prec:.2f}")
@@ -109,26 +108,16 @@ if uploaded_file is not None:
             sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax)
             st.pyplot(fig)
 
-            # Save model
-            os.makedirs("models", exist_ok=True)
-            joblib.dump(model, "models/fraud_model.joblib")
-            st.success("✅ Model trained and saved!")
+            st.success("✅ Model trained and evaluated automatically!")
 
-    # ---------------------------
-    # 🔮 Predictions Tab
-    # ---------------------------
-    with tab4:
-        st.subheader("Custom Prediction")
+        # ---------------------------
+        # 🔮 Predictions Tab
+        # ---------------------------
+        with tab3:
+            st.subheader("Custom Prediction")
 
-        if not os.path.exists("models/fraud_model.joblib"):
-            st.warning("⚠️ No trained model found. Please train a model in the '🧠 Model Training' tab first.")
-        else:
-            model = joblib.load("models/fraud_model.joblib")
-
-            if "isFraud" in df.columns:
-                X = pd.get_dummies(df.drop("isFraud", axis=1), drop_first=True)
-            else:
-                X = pd.get_dummies(df, drop_first=True)
+            # Drop target col for features
+            X = pd.get_dummies(df.drop(target_col, axis=1), drop_first=True)
 
             user_input = {}
             for col in X.columns:
