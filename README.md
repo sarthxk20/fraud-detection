@@ -29,5 +29,6 @@ It provides an interactive web application where users can upload transaction da
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/sarthxk20/fraud-detection.git
+git clone https://github.com/sarthxk20/fraud-detectionproject.git
+
 cd fraud-detection-streamlit
