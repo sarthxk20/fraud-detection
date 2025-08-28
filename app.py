@@ -135,4 +135,4 @@ if uploaded_file is not None:
 
         st.write("Prediction:", "⚠️ Fraud" if prediction == 1 else "✅ Not Fraud")
 else:
-    st.info("👆 Upload a dataset to get started.")
+    st.info("Upload a dataset to get started.")
