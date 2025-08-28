@@ -9,7 +9,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
-import joblib, os
+import joblib, os, gc
 
 # ---------------------------
 # 🎨 App Config
@@ -25,25 +25,39 @@ st.sidebar.header("⚙️ Controls")
 uploaded_file = st.sidebar.file_uploader("Upload your dataset (CSV)", type=["csv"])
 use_sample = st.sidebar.checkbox("👉 Use sample dataset (demo)")
 
+df = None
 if uploaded_file:
     df = pd.read_csv(uploaded_file)
     st.success("✅ Custom dataset uploaded!")
 elif use_sample:
-    df = pd.read_csv("sample_fraud_data.csv")   # make sure this file is in repo
-    st.success("✅ Loaded sample dataset!")
+    try:
+        df = pd.read_csv("sample_fraud_data.csv")  # keep this file small (<5-10MB)
+        st.success("✅ Loaded sample dataset!")
+    except FileNotFoundError:
+        st.error("❌ sample_fraud_data.csv not found. Please add it to the repo.")
 else:
-    df = None
+    st.info("👆 Upload a dataset or use the sample dataset to get started.")
 
 # ---------------------------
 # 🚀 If dataset is available
 # ---------------------------
 if df is not None:
+    # Limit dataset size for memory
+    MAX_ROWS = 50000
+    if df.shape[0] > MAX_ROWS:
+        df = df.sample(MAX_ROWS, random_state=42)
+        st.warning(f"⚠️ Dataset was too large. Using a random {MAX_ROWS} rows for demo.")
+
     # ---------------------------
     # Let user pick target column
     # ---------------------------
     target_col = st.sidebar.selectbox("Select the target column", df.columns)
 
     if target_col:
+        # Drop obvious non-features (like IDs)
+        drop_cols = [c for c in df.columns if "id" in c.lower()]
+        df = df.drop(columns=drop_cols, errors="ignore")
+
         # Preprocess
         X = pd.get_dummies(df.drop(target_col, axis=1), drop_first=True)
         y = df[target_col]
@@ -55,13 +69,17 @@ if df is not None:
         )
 
         # Model selection
-        model_choice = st.sidebar.selectbox("Select Model", ["Random Forest", "Logistic Regression"])
+        model_choice = st.sidebar.selectbox("Select Model", ["Random Forest (light)", "Logistic Regression"])
 
-        if model_choice == "Random Forest":
-            n_estimators = st.sidebar.slider("n_estimators", 10, 200, 50)
-            model = RandomForestClassifier(n_estimators=n_estimators, random_state=42)
+        if model_choice == "Random Forest (light)":
+            n_estimators = st.sidebar.slider("n_estimators", 10, 100, 50)
+            model = RandomForestClassifier(
+                n_estimators=n_estimators,
+                max_depth=10,   # limit depth to reduce memory
+                random_state=42
+            )
         else:
-            model = LogisticRegression(max_iter=1000)
+            model = LogisticRegression(max_iter=500)  # lighter than default 1000
 
         # Train
         model.fit(X_train, y_train)
@@ -88,10 +106,13 @@ if df is not None:
             st.write(df.describe())
 
             st.subheader("Correlation Heatmap")
-            corr = df.corr(numeric_only=True)
-            fig, ax = plt.subplots(figsize=(10, 6))
-            sns.heatmap(corr, annot=False, cmap="coolwarm", ax=ax)
-            st.pyplot(fig)
+            if X.shape[1] <= 30:  # avoid giant heatmaps
+                corr = df.corr(numeric_only=True)
+                fig, ax = plt.subplots(figsize=(10, 6))
+                sns.heatmap(corr, annot=False, cmap="coolwarm", ax=ax)
+                st.pyplot(fig)
+            else:
+                st.info("⚠️ Too many features to plot correlation heatmap.")
 
         # ---------------------------
         # 📈 Model Performance Tab
@@ -129,14 +150,15 @@ if df is not None:
 
             st.success("✅ Model trained and evaluated automatically!")
 
+            # Free memory
+            del X_train, X_test, y_train, y_test
+            gc.collect()
+
         # ---------------------------
         # 🔮 Predictions Tab
         # ---------------------------
         with tab3:
             st.subheader("Custom Prediction")
-
-            # Drop target col for features
-            X = pd.get_dummies(df.drop(target_col, axis=1), drop_first=True)
 
             user_input = {}
             for col in X.columns:
@@ -146,5 +168,3 @@ if df is not None:
             prediction = model.predict(input_df)[0]
 
             st.write("Prediction:", "⚠️ Fraud" if prediction == 1 else "✅ Not Fraud")
-else:
-    st.info("👆 Upload a dataset or use the sample dataset to get started.")
