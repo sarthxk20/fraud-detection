@@ -12,7 +12,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 import joblib, os
 
 # ---------------------------
-# 🎨 App Layout & Title
+# 🎨 App Config
 # ---------------------------
 st.set_page_config(page_title="Fraud Detection Dashboard", layout="wide")
 st.title("🛡️ Fraud Detection with Machine Learning")
@@ -120,19 +120,23 @@ if uploaded_file is not None:
     with tab4:
         st.subheader("Custom Prediction")
 
-        if "isFraud" in df.columns:
-            X = pd.get_dummies(df.drop("isFraud", axis=1), drop_first=True)
+        if not os.path.exists("models/fraud_model.joblib"):
+            st.warning("⚠️ No trained model found. Please train a model in the '🧠 Model Training' tab first.")
         else:
-            X = pd.get_dummies(df, drop_first=True)
+            model = joblib.load("models/fraud_model.joblib")
 
-        user_input = {}
-        for col in X.columns:
-            user_input[col] = st.number_input(f"{col}", value=float(X[col].mean()))
+            if "isFraud" in df.columns:
+                X = pd.get_dummies(df.drop("isFraud", axis=1), drop_first=True)
+            else:
+                X = pd.get_dummies(df, drop_first=True)
 
-        input_df = pd.DataFrame([user_input])
-        model = joblib.load("models/fraud_model.joblib")
-        prediction = model.predict(input_df)[0]
+            user_input = {}
+            for col in X.columns:
+                user_input[col] = st.number_input(f"{col}", value=float(X[col].mean()))
 
-        st.write("Prediction:", "⚠️ Fraud" if prediction == 1 else "✅ Not Fraud")
+            input_df = pd.DataFrame([user_input])
+            prediction = model.predict(input_df)[0]
+
+            st.write("Prediction:", "⚠️ Fraud" if prediction == 1 else "✅ Not Fraud")
 else:
-    st.info("Upload a dataset to get started.")
+    st.info("👆 Upload a dataset to get started.")
