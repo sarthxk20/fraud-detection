@@ -1,0 +1,1 @@
+{"features": ["step", "type", "amount", "oldbalanceOrg", "newbalanceOrig", "oldbalanceDest", "newbalanceDest", "isFlaggedFraud"], "target": "isFraud", "threshold": 0.5}
