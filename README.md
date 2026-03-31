@@ -15,6 +15,47 @@ It provides an interactive web application where users can upload transaction da
 
 ---
 
+## Model Comparison
+
+This project compares two approaches for fraud detection:
+
+| Model | Approach |
+|---|---|
+| Random Forest | Ensemble of decision trees — fast, interpretable baseline |
+| Neural Network | 3-layer TensorFlow/Keras network with BatchNorm and Dropout |
+
+To run the comparison:
+```bash
+pip install tensorflow
+python neural_network.py
+```
+
+Results are printed to console and the training history is saved as `training_history.png`.
+```
+
+---
+
+**Step 4 — Update fraud detection tag line**
+
+Add to your project description wherever you list the tech stack:
+
+`Python · Scikit-Learn · TensorFlow · Keras · Random Forest · Logistic Regression · Streamlit`
+
+---
+
+**Step 5 — Add this bullet to fraud detection on your resume**
+
+Once you've run the script and have actual numbers, use this template — fill in your real results:
+
+> "Implemented and compared a TensorFlow neural network (3-layer Keras architecture with BatchNorm and Dropout) against a Random Forest baseline — evaluating across accuracy, precision, recall, F1, and AUC on imbalanced fraud data."
+
+---
+
+**One thing before you run it** — your fraud detection app uses uploaded CSVs so there's no fixed dataset. For this script to produce real, reportable numbers you need to run it against a standard dataset. The Kaggle Credit Card Fraud dataset is the benchmark — it's free, widely used, and will give you publishable results. Download it from:
+```
+https://www.kaggle.com/datasets/mlg-ulb/creditcardfraud
+
+
 ## 🛠️ Tech Stack
 - **Python** (3.11+)
 - **Pandas** – Data manipulation
